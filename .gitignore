@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+state.json
+codex-quota-state.json
+bark-url
+.coverage
