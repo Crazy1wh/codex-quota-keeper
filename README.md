@@ -1,59 +1,25 @@
-# codex-quota-keeper
+# ⏱️ Codex Quota Keeper
 
-一个小型定时脚本：读取已登录 Codex CLI 的 5 小时额度窗口，在窗口到期后发起一次轻量真实请求，并再次查询额度，只有确认新窗口已建立时才可选发送 Bark 通知。
+自动检查 Codex 额度窗口，到期后轻量激活，确认成功再发 Bark 通知。
 
-> **重要：本项目不会增加、绕过或恢复任何额度。真实激活请求本身会消耗 Codex 额度，也可能产生与账户方案相关的费用。** 请遵守 OpenAI、Bark 和所在地区的条款、政策与法律，自行评估自动化调用是否适合你的账户。
+🐍 Python 标准库 · 🤖 Agent 配置 · 🔔 Bark 推送 · 📄 MIT
 
-## 最简单：让 AI Agent 帮你配置
+> ⚠️ 不增加或绕过额度；激活会发出真实 Codex 请求并消耗额度。
 
-把下面这段话直接发给有本机终端权限的 AI Agent（如 Codex、Claude Code、Hermes）：
+## 🤖 交给 Agent 安装
+
+复制给有本机终端权限的 Codex、Claude Code 或 Hermes：
 
 ```text
-请帮我安装配置 https://github.com/Crazy1wh/codex-quota-keeper 。
-先阅读仓库 README.md 和 AGENTS.md，按 AGENTS.md 的部署流程执行。
-自动检查 Python、Codex CLI 登录状态和已有定时任务，能自动发现的配置不要重复问我。
-默认每 5 分钟检查、时区 Asia/Shanghai；Bark 可选，没提供就先不开启。
-配置前说明会定期发出真实 Codex 请求并消耗额度，得到我确认后再启用定时任务。
-不要读取或展示我的登录凭据，不覆盖已有任务，不提交密钥。
-先跑离线测试；真实激活和测试推送须另经我同意。最后给我安装位置、定时任务、验证结果和停用方法。
+帮我部署 https://github.com/Crazy1wh/codex-quota-keeper 。
+读取 README.md 和 AGENTS.md，自动检查依赖、登录状态并配置每 5 分钟检查。
+Bark 可选；启用定时任务前向我确认额度消耗，真实测试另行确认。
+不要展示凭据、覆盖其他任务。完成后报告验证结果和停用方法。
 ```
 
-你只需要完成 Codex 登录、按需提供私有 Bark 配置文件，并确认是否启用定时任务；Agent 负责其余检查和配置。没有终端权限的聊天助手只能给出操作指导，不能代你完成本机安装。
+你只需完成 Codex 登录、确认启用；其余按 [AGENTS.md](AGENTS.md) 执行。
 
-## 要求与安装（手动方式）
-
-- Python 3.10 或更高版本（只使用标准库）
-- 已安装 Codex CLI，并已在运行脚本的同一用户下完成登录
-- 可选：Bark 推送地址
-
-```bash
-git clone https://github.com/Crazy1wh/codex-quota-keeper.git
-cd codex-quota-keeper
-python3 -m unittest discover -s tests -v
-python3 -m compileall -q codex_quota_keeper.py tests
-```
-
-先手动运行一次以检查配置。注意：满足激活条件时，这会执行真实 Codex 请求并消耗额度。
-
-```bash
-python3 codex_quota_keeper.py
-```
-
-## 配置
-
-| 环境变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `CODEX_BIN` | 从 `PATH` 查找 `codex` | Codex CLI 可执行文件；cron 中建议使用绝对路径 |
-| `CODEX_QUOTA_STATE_FILE` | `~/.local/state/codex-quota-keeper/state.json` | 状态文件路径 |
-| `CODEX_QUOTA_LOG_FILE` | `~/.local/state/codex-quota-keeper/keeper.log` | 日志文件路径 |
-| `CODEX_QUOTA_TIMEZONE` | `Asia/Shanghai` | IANA 时区名 |
-| `BARK_URL` | 未设置 | 完整 Bark 基础地址；设置后优先于文件 |
-| `BARK_URL_FILE` | `~/.config/codex-quota-keeper/bark-url` | 保存 Bark 地址的私有文件 |
-| `BARK_GROUP` | `codex-quota` | Bark 通知分组 |
-
-Bark 未配置或配置文件不存在时，脚本会静默跳过通知。通知保留 `ttl=600` 和 `isArchive=1`。用量百分比使用全角字符，日期时间使用半角数字。
-
-通知示例（示例数据，不代表真实账户）：
+## 🔔 通知效果
 
 ```text
 ✅ Codex 额度刷新成功
@@ -61,44 +27,73 @@ Bark 未配置或配置文件不存在时，脚本会静默跳过通知。通知
 周额度 · 已用 ３１％ · 11-04 14:44
 ```
 
-Bark 系统通知不能由本脚本指定等宽字体；全角字符只能改善对齐，100% 或缺失值也会改变列宽。图标引用 LobeHub lobe-icons 的公开资源，未在本仓库分发图标文件。
+示例数据。全角用量、半角时间；确认新窗口才推送，普通检查不打扰。
 
-### 已知限制
+## 🛠️ 手动安装
 
-- 依赖 Codex CLI 的 `app-server` 返回结构，CLI 升级后可能需要适配。
-- 查询循环的超时不能打断底层阻塞读取；无人值守运行建议加外层 `timeout`（例如在 cron 命令的 Python 前添加 `/usr/bin/timeout 240s`）。
-- 请勿绕过 `flock` 同时运行多个实例；脚本本身没有进程锁。
-
-
-建议把含 Bark 密钥的文件设为仅本人可读写：
+需要 Python 3.10+、时区数据库，以及同一用户下已登录的 Codex CLI。
 
 ```bash
+git clone https://github.com/Crazy1wh/codex-quota-keeper.git
+cd codex-quota-keeper
+python3 -m unittest discover -s tests -v
+python3 codex_quota_keeper.py  # 满足条件时会执行真实激活
+```
+
+<details>
+<summary>🔔 配置 Bark（可选）</summary>
+
+不配置则跳过通知。将完整 Bark 地址保存在仓库外的私有文件：
+
+```bash
+umask 077
 mkdir -p ~/.config/codex-quota-keeper
 printf '%s\n' 'https://api.day.app/YOUR_PRIVATE_KEY' > ~/.config/codex-quota-keeper/bark-url
 chmod 600 ~/.config/codex-quota-keeper/bark-url
-chmod 600 ~/.local/state/codex-quota-keeper/state.json 2>/dev/null || true
 ```
 
-不要把 Bark URL、状态文件或日志提交到版本库，也不要把它们发给他人。
+已有配置请勿覆盖。通知使用 `isArchive=1`、`ttl=600`；图标引用 LobeHub lobe-icons 公开资源。
 
-## cron 示例
+</details>
 
-先用 `command -v python3` 和 `command -v codex` 找到真实绝对路径，再替换下面所有 `/ABSOLUTE/PATH/...` 占位符。`flock` 防止上一次任务未结束时重复运行。
+<details>
+<summary>⚙️ 环境变量</summary>
+
+| 变量 | 默认值 / 用途 |
+| --- | --- |
+| `CODEX_BIN` | 从 PATH 查找 `codex` |
+| `CODEX_QUOTA_STATE_FILE` | `~/.local/state/codex-quota-keeper/state.json` |
+| `CODEX_QUOTA_LOG_FILE` | `~/.local/state/codex-quota-keeper/keeper.log` |
+| `CODEX_QUOTA_TIMEZONE` | `Asia/Shanghai` |
+| `BARK_URL` | 完整推送地址，优先于文件 |
+| `BARK_URL_FILE` | `~/.config/codex-quota-keeper/bark-url` |
+| `BARK_GROUP` | `codex-quota` |
+
+状态与日志目录自动创建，敏感配置不要提交到 Git。
+
+</details>
+
+<details>
+<summary>🕒 Linux 定时运行</summary>
+
+用 `command -v python3 codex flock timeout` 查找路径，替换以下占位符；先创建可写的锁文件目录。
 
 ```cron
-*/5 * * * * /usr/bin/flock -n /ABSOLUTE/PATH/TO/codex-quota-keeper.lock /usr/bin/env CODEX_BIN=/ABSOLUTE/PATH/TO/codex CODEX_QUOTA_STATE_FILE=/ABSOLUTE/PATH/TO/state.json CODEX_QUOTA_LOG_FILE=/ABSOLUTE/PATH/TO/keeper.log /ABSOLUTE/PATH/TO/python3 /ABSOLUTE/PATH/TO/codex-quota-keeper/codex_quota_keeper.py
+*/5 * * * * /usr/bin/flock -n /ABSOLUTE/PATH/TO/keeper.lock /usr/bin/env CODEX_BIN=/ABSOLUTE/PATH/TO/codex /usr/bin/timeout 240s /ABSOLUTE/PATH/TO/python3 /ABSOLUTE/PATH/TO/codex-quota-keeper/codex_quota_keeper.py
 ```
 
-cron 必须以已登录 Codex CLI 的用户运行。状态和日志的父目录会由脚本自动创建。
+以已登录 Codex 的用户运行，并确保 cron 的 PATH 能找到 Codex 所需的 Node.js 等运行时。不要重复添加任务。停用时只移除本项目任务，不要使用 `crontab -r`。
 
-## 工作方式与隐私
+</details>
 
-脚本通过本机 Codex CLI 的 `app-server` 查询额度；到期后运行一次受限提示词的 `codex exec`，随后重新查询并验证 reset 时间确实前进。仅在确认成功后发送 Bark，推送失败不会撤销或破坏已经保存的成功状态。
+## 📌 注意事项
 
-状态文件和日志保存在本机，但可能包含额度、时间、错误信息和命令输出摘要。Bark 开启后，通知内容会发送给你配置的 Bark 服务；脚本还会在通知参数中引用公开图标 URL。请审阅代码、保护私有文件，并根据你的隐私要求决定是否启用通知。
+- 通过本机 Codex CLI 查询与激活；CLI 接口变化可能需要适配。
+- 用 `flock` 防并发、`timeout` 防阻塞；完整部署流程见 [AGENTS.md](AGENTS.md)。
+- 本地日志可能包含命令输出；启用 Bark 后额度与时间会发送到配置的推送服务。
+- 系统字体无法保证严格对齐，100% 或缺失值会改变列宽。
+- 非 OpenAI / Bark 官方项目；使用者自行遵守服务条款并承担费用。
 
-本项目与 OpenAI、Codex 或 Bark **无隶属、授权或背书关系**。使用者负责账户安全、费用、服务条款合规、自动化频率和运行环境安全。
+## 📄 开源协议
 
-## 许可证
-
-[MIT](LICENSE)
+[MIT License](LICENSE)
